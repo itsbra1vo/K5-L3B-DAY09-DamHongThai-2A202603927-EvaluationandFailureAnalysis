@@ -42,3 +42,12 @@ The regression gate blocks `refund_amount_correct`, `reply_ledger_match`, and `p
 - **Gate owner:** the fork's release/evaluation maintainer investigates a blocked PR; any waiver needs explicit product and evaluation-owner approval recorded in that PR.
 - **Limits:** MockLLM and public fixtures only; 14 distinct items give a small paired-bootstrap sample even though there are 70 item-seed trials. The five fixed seeds cannot reliably detect bugs that appear in only one of three seeds. No new held-out human-labelled set or real-user performance has been measured. Cost is a harness estimate, not production spend.
 - **Versioning:** adding or changing eval items requires a new eval-set version and a regenerated, committed baseline; changing metric definitions or thresholds requires a metric-spec version bump and documented rationale.
+
+## Advanced/Expert v2
+
+- **Eval set:** v2 contains the 14 v1 items plus 14 adversarial-pack claims (28 items × 5 seeds). Every mechanism in `fm_map.yaml` maps to an FM code; the v2 build/check reports 0 problems.
+- **A/A noise:** alternate seeds `66,77,88,99,110` produce Δ = 0.0000 for every numeric metric on the deterministic MockLLM baseline. Real stochastic LLM runs may have a non-zero noise band, so `pass_hat_5` uses a 0.80 floor selected outside that band rather than tuning to individual variants.
+- **Flakiness:** `pass_hat_5` is blocking in v2. It blocks `flaky_regression` together with `pass_rate` and prevents a 1/5-seed rounding defect from being averaged away.
+- **Slice gates:** `money_movement/pass_rate` and `adversarial/pass_rate` are blocking. `slice_regression` remains 0.9357 overall on `pass_rate` but is blocked by `money_movement`; `adversarial` protects the held-out attack pack.
+- **Integrity:** public traps for NaN grader values, dropped failing rows, cherry-picked seeds, and loosened specs are all blocked. The report manifest, `(item_id, seed)` coverage, grader failures, metric values, slice relabelling, and same-version ratchet are checked before normal thresholds run.
+- **Limit:** one bug appearing in only 1/3 seeds is not reliably detectable with five fixed seeds; this capping is a sample-size limit, not a reason to lower thresholds. The MockLLM result does not measure live production traffic or human disagreement.
