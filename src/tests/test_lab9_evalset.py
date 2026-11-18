@@ -28,13 +28,14 @@ def evalset_cli(tmp_path):
     return run_evalset
 
 
-def test_build_writes_items_and_labels_without_checking_tags(tmp_path, evalset_cli):
+def test_build_writes_tagged_items_and_separate_labels(tmp_path, evalset_cli):
     result = evalset_cli("--build")
     assert result.returncode == 0, result.stdout + result.stderr
     assert "problem(s)" not in result.stdout
     item = json.loads((tmp_path / "data/eval/eval_set_v1.jsonl").read_text(encoding="utf-8"))
     labels = json.loads((tmp_path / "data/eval/labels_v1.json").read_text(encoding="utf-8"))
     assert item["claim_id"] == "C-001"
+    assert item["failure_modes"] == ["FM-01", "FM-04"]
     assert "expected" not in item
     assert labels == {"C-001": {"refund_vnd": 35000}}
 
@@ -57,3 +58,14 @@ def test_check_rejects_missing_tags(tmp_path, evalset_cli):
     result = evalset_cli("--check")
     assert result.returncode == 1, result.stdout + result.stderr
     assert "failure_modes empty" in result.stdout
+
+
+def test_sha12_is_independent_of_line_endings(tmp_path):
+    from lab9.evalset import sha12
+
+    lf = tmp_path / "lf.jsonl"
+    crlf = tmp_path / "crlf.jsonl"
+    lf.write_bytes(b'{"item_id":"E-001"}\n{"item_id":"E-002"}\n')
+    crlf.write_bytes(b'{"item_id":"E-001"}\r\n{"item_id":"E-002"}\r\n')
+
+    assert sha12(lf) == sha12(crlf)

@@ -29,13 +29,33 @@ REQUIRED = ("item_id", "claim_id", "failure_modes", "provenance", "split", "eval
 
 FM_CODE = re.compile(r"FM-\d{2}")
 
+# Public matrix cases tagged with the failure modes they exercise.
+FAILURE_MODES_BY_MATRIX_ID: dict[str, list[str]] = {
+    "T01": ["FM-01", "FM-04"],
+    "T02": ["FM-01", "FM-03"],
+    "T03": ["FM-01"],
+    "T04": ["FM-01"],
+    "T05": ["FM-01", "FM-09"],
+    "T06": ["FM-01", "FM-06"],
+    "T07": ["FM-01", "FM-02"],
+    "T08": ["FM-01", "FM-04", "FM-08"],
+    "T09": ["FM-01"],
+    "T10": ["FM-01", "FM-04", "FM-07"],
+    "T11": ["FM-01", "FM-04", "FM-07"],
+    "T12": ["FM-01", "FM-04", "FM-07"],
+    "T13": ["FM-01", "FM-02", "FM-05"],
+    "T14": ["FM-01", "FM-04", "FM-05", "FM-08"],
+}
+
 
 def load_jsonl(path: Path) -> list[dict[str, Any]]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
 def sha12(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()[:12]
+    """Hash text consistently across LF/CRLF checkouts."""
+    content = path.read_bytes().replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    return hashlib.sha256(content).hexdigest()[:12]
 
 
 def build(source: Path = SOURCE) -> tuple[int, int]:
@@ -46,8 +66,7 @@ def build(source: Path = SOURCE) -> tuple[int, int]:
         items.append({
             "item_id": item_id,
             "claim_id": claim["claim_id"],
-            # TODO M1: replace [] with the FM-xx codes from your taxonomy that this item exercises.
-            "failure_modes": [],
+            "failure_modes": FAILURE_MODES_BY_MATRIX_ID.get(claim.get("matrix_id"), []),
             "provenance": {"source": "lab8_public", "matrix_id": claim.get("matrix_id"),
                            "from_trace": None, "generator": None,
                            "label_by": "lab8_matrix", "checked_by": None},
