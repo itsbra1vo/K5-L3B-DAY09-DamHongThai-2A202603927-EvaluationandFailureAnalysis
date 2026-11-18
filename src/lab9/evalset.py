@@ -53,7 +53,9 @@ def load_jsonl(path: Path) -> list[dict[str, Any]]:
 
 
 def sha12(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()[:12]
+    """Hash text consistently across LF/CRLF checkouts."""
+    content = path.read_bytes().replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    return hashlib.sha256(content).hexdigest()[:12]
 
 
 def build(source: Path = SOURCE) -> tuple[int, int]:
