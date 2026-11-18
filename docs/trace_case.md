@@ -1,30 +1,23 @@
-# Trace case: từ trace tới quyết định sai đầu tiên
+# Trace case: the first incorrect decision and its regression test
 
-Một trace case trả lời một câu: **bước nào là bước sai đầu tiên**, và test nào sẽ bắt được nó lần sau.
+## Reproduce
+
+From `src/`, run:
 
 ```bash
-cd src
-python -m lab9.trace_case --shape seeded_regression --claim C-002 --seed 11
-python -m lab9.trace_case --shape fixed --claim C-002 --seed 11   # đối chứng
+python -m lab9.trace_case --shape seeded_regression --claim C-008 --seed 11
+python -m lab9.trace_case --shape fixed --claim C-008 --seed 11
 ```
 
-Lệnh in ra ba phần: các event trong trace (`reply`, `decision`, `model_override`, `error` …), ledger so với nhãn, và lý do của grader Lab 8.
+## Case
 
-## Mẫu điền (mỗi bạn 1 case, lấy từ trial đang fail trong report)
-
-| Trường | Nội dung |
+| Field | Evidence |
 |---|---|
-| Trial | `<shape> <claim>@<seed>`, run ID trong report |
-| Triệu chứng | Grader nào fail; reply nói gì so với ledger ghi gì |
-| Bước sai đầu tiên | Số thứ tự event + kind + trích payload (≤1 dòng) |
-| Vì sao là bước *đầu tiên* | Các bước trước đó đúng ra sao (dẫn số event) |
-| Failure mode | Mã FM-xx trong `docs/failure_taxonomy.md` |
-| Đối chứng | Cùng claim@seed trên shape `fixed`: bước đó khác thế nào |
-| Regression test | Tên test + grader/assert nào bắt được; đã thấy fail trên variant lỗi và pass trên `fixed` chưa |
-| Chưa chắc chắn | Điều trace không chứng minh được |
-
-## Quy tắc
-
-- Đọc **ledger trước reply**: reply trôi chảy vẫn có thể đi kèm một khoản hoàn sai.
-- "Bước sai đầu tiên" phải dẫn số event cụ thể, không phải "agent bị nhầm".
-- Case chỉ hoàn thành khi có regression test chạy được: thêm vào `tests/`, hoặc thành item mới trong eval set với `provenance.from_trace`.
+| Trial | `seeded_regression C-008@11`, run `E-seeded_regression-20261118-2bc9` |
+| Symptom | The Lab 8 outcome grader passes and the ledger matches the expected 20,000 VND, but the reply claims 35,000 VND. `ReplyLedgerMatches` fails this trial. |
+| First incorrect step | Event 3 (`quote`) proposes 35,000 VND; the expected and recorded refund is 20,000 VND. Events 1–2 hand off and read the order before this incorrect quote. |
+| Visible consequence | Event 5 (`reply`) says “Dạ, LogiX đã hoàn 35.000đ cho đơn O-808.” while the ledger contains 20,000 VND. |
+| Failure modes | FM-04 (`sum_parts / round_down`) for the incorrect quote and FM-08 (`misreport`) for the reply/ledger mismatch. |
+| Fixed control | On the same claim and seed, `fixed` replies with 20,000 VND; `ReplyLedgerMatches` passes. |
+| Regression test | `test_seeded_regression_c008_misreport_is_caught` runs both shapes and asserts that the grader fails the regression and passes the fixed control. |
+| Limit | The trace shows this deterministic public case only; it does not establish a real-world failure rate. |

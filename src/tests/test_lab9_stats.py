@@ -36,9 +36,31 @@ def test_kappa_undefined_for_constant_judge(stats):
         stats.cohen_kappa(["PASS"] * 5, ["PASS"] * 5)
 
 
+def test_classification_metrics_validate_label_pairs(stats):
+    with pytest.raises(ValueError, match="same length"):
+        stats.confusion(["PASS"], [])
+    with pytest.raises(ValueError, match="PASS.*FAIL"):
+        stats.confusion(["MAYBE"], ["PASS"])
+
+
+def test_precision_recall_zero_denominators(stats):
+    assert stats.precision_recall(["PASS"], ["PASS"]) == (0.0, 0.0)
+    assert stats.precision_recall(["FAIL"], ["PASS"]) == (0.0, 0.0)
+
+
+def test_kappa_undefined_for_empty_labels(stats):
+    with pytest.raises(ValueError, match="empty"):
+        stats.cohen_kappa([], [])
+
+
 def test_rogan_gladen_clips(stats):
     assert stats.rogan_gladen(0.28, 0.8, 66 / 70) == pytest.approx(0.3, abs=0.01)
     assert stats.rogan_gladen(0.0, 0.8, 0.9) == 0.0
+
+
+def test_rogan_gladen_rejects_unidentifiable_rates(stats):
+    with pytest.raises(ValueError, match="sensitivity \\+ specificity"):
+        stats.rogan_gladen(0.5, 0.4, 0.6)
 
 
 def test_paired_bootstrap_reference(stats):
@@ -49,3 +71,19 @@ def test_paired_bootstrap_reference(stats):
 
 def test_paired_bootstrap_identical_is_zero(stats):
     assert stats.paired_bootstrap([1, 0, 1], [1, 0, 1]) == (0.0, 0.0, 0.0)
+
+
+def test_paired_bootstrap_validates_samples(stats):
+    with pytest.raises(ValueError, match="same length"):
+        stats.paired_bootstrap([1], [])
+    with pytest.raises(ValueError, match="must not be empty"):
+        stats.paired_bootstrap([], [])
+    with pytest.raises(ValueError, match="finite"):
+        stats.paired_bootstrap([float("nan")], [0])
+    with pytest.raises(ValueError, match="confidence"):
+        stats.paired_bootstrap([1], [0], confidence=1)
+
+
+def test_paired_bootstrap_is_reproducible(stats):
+    samples = ([1, 1, 0.8, 1, 0.6], [1, 0.8, 0.8, 0.6, 0.6])
+    assert stats.paired_bootstrap(*samples) == stats.paired_bootstrap(*samples)
